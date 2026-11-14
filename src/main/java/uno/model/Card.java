@@ -41,7 +41,8 @@ public class Card {
         return value;
     }
 
-    public void applyEffect(GameActions game, CardColor chosenColor) {
+    public void applyEffect(GameActions game,
+                            Optional<CardColor> chosenColor) {
         effect.apply(game, chosenColor);
     }
 
