@@ -3,25 +3,41 @@ package uno;
 import uno.model.Card;
 import uno.model.CardColor;
 import uno.model.CardValue;
-import uno.model.Player;
+import uno.model.Deck;
+import uno.model.DiscardPile;
 import uno.effects.NoEffect;
 
 import java.util.Optional;
+import java.util.Random;
 
 public class Main {
     public static void main(String[] args) {
-        Player player = new Player("Игрок 1");
+        Deck deck = new Deck(new Random(42));
+        DiscardPile discardPile = new DiscardPile();
 
-        Card card = new Card(
+        Card card1 = new Card(
                 Optional.of(CardColor.RED),
                 CardValue.FIVE,
                 new NoEffect()
         );
 
-        player.getHand().addCard(card);
+        Card card2 = new Card(
+                Optional.of(CardColor.BLUE),
+                CardValue.TWO,
+                new NoEffect()
+        );
 
-        System.out.println("Игрок: " + player.getName());
-        System.out.println("Карты в руке: " + player.getHand().size());
-        System.out.println("Карты: " + player.getHand().getCards());
+        deck.addCard(card1);
+        deck.addCard(card2);
+
+        System.out.println("Карт в колоде: " + deck.size());
+
+        deck.shuffle();
+
+        Card drawnCard = deck.drawCard();
+        discardPile.addCard(drawnCard);
+
+        System.out.println("Карт в колоде: " + deck.size());
+        System.out.println("Верхняя карта сброса: " + discardPile.getTopCard());
     }
 }
