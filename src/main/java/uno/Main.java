@@ -1,43 +1,39 @@
 package uno;
 
-import uno.model.Card;
-import uno.model.CardColor;
-import uno.model.CardValue;
-import uno.model.Deck;
-import uno.model.DiscardPile;
-import uno.effects.NoEffect;
+import uno.model.*;
 
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Main {
     public static void main(String[] args) {
+        Player player1 = new Player("Игрок 1");
+        Player player2 = new Player("Игрок 2");
+        Player player3 = new Player("Игрок 3");
+
         Deck deck = new Deck(new Random(42));
         DiscardPile discardPile = new DiscardPile();
 
-        Card card1 = new Card(
-                Optional.of(CardColor.RED),
-                CardValue.FIVE,
-                new NoEffect()
-        );
+        List<Player> players = new ArrayList<>();
+        players.add(player1);
+        players.add(player2);
+        players.add(player3);
 
-        Card card2 = new Card(
-                Optional.of(CardColor.BLUE),
-                CardValue.TWO,
-                new NoEffect()
-        );
+        GameState game = new GameState(players, deck, discardPile);
 
-        deck.addCard(card1);
-        deck.addCard(card2);
+        System.out.println("Сейчас ходит: "
+                + game.getCurrentPlayer().getName());
 
-        System.out.println("Карт в колоде: " + deck.size());
+        game.moveToNextPlayer();
 
-        deck.shuffle();
+        System.out.println("После перехода: "
+                + game.getCurrentPlayer().getName());
 
-        Card drawnCard = deck.drawCard();
-        discardPile.addCard(drawnCard);
+        game.reverseDirection();
+        game.moveToNextPlayer();
 
-        System.out.println("Карт в колоде: " + deck.size());
-        System.out.println("Верхняя карта сброса: " + discardPile.getTopCard());
+        System.out.println("После смены направления: "
+                + game.getCurrentPlayer().getName());
     }
 }
