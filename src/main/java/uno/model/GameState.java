@@ -91,4 +91,27 @@ public class GameState {
         moveToNextPlayer();
         moveToNextPlayer();
     }
+    /**
+     * Проверяет, принадлежит ли карта текущему игроку.
+     */
+    public boolean currentPlayerHasCard(Card card) {
+        return getCurrentPlayer().getHand().getCards().contains(card);
+    }
+    /**
+     * Возвращает следующего игрока с учётом направления.
+     */
+    public Player getNextPlayer() {
+        int nextIndex = currentPlayerIndex
+                + (direction == Direction.CLOCKWISE ? 1 : -1);
+
+        if (nextIndex >= players.size()) {
+            nextIndex = 0;
+        }
+
+        if (nextIndex < 0) {
+            nextIndex = players.size() - 1;
+        }
+
+        return players.get(nextIndex);
+    }
 }
