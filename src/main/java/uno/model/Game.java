@@ -8,6 +8,7 @@ import java.util.Optional;
 public class Game implements GameActions {
     private final GameState state;
     private boolean skipNextPlayer = false;
+    private Player unoPlayer;
 
     public Game(GameState state) {
         if (state == null) {
@@ -66,6 +67,11 @@ public class Game implements GameActions {
         }
 
         player.getHand().removeCard(card);
+        if (player.getHand().size() == 1) {
+            unoPlayer = player;
+        } else {
+            unoPlayer = null;
+        }
         state.getDiscardPile().addCard(card);
 
         if (!card.getValue().isWild()) {
@@ -80,6 +86,18 @@ public class Game implements GameActions {
             state.moveToNextPlayer();
             skipNextPlayer = false;
         }
+    }
+    /**
+     * Берёт одну карту из колоды для текущего игрока.
+     */
+    public Card drawCard() {
+        Player player = state.getCurrentPlayer();
+
+        Card card = drawFromDeck();
+
+        player.getHand().addCard(card);
+
+        return card;
     }
     @Override
     public void skipNextPlayer() {
@@ -107,7 +125,7 @@ public class Game implements GameActions {
                 );
             }
 
-            player.getHand().addCard(state.getDeck().drawCard());
+            player.getHand().addCard(drawFromDeck());
         }
 
         skipNextPlayer = true;
@@ -117,5 +135,107 @@ public class Game implements GameActions {
     public void changeColor(CardColor color) {
         state.setCurrentColor(color);
     }
+    /**
+     * Берёт карту из колоды.
+     * Если колода пуста, восстанавливает её из стопки сброса.
+     */
+    private Card drawFromDeck() {
+        Deck deck = state.getDeck();
+        DiscardPile discardPile = state.getDiscardPile();
+
+        if (deck.isEmpty()) {
+            if (discardPile.size() <= 1) {
+                throw new IllegalStateException(
+                        "Нет карт для восстановления колоды"
+                );
+            }
+
+            Card topCard = discardPile.takeTopCard();
+
+            while (!discardPile.isEmpty()) {
+                deck.addCard(discardPile.takeTopCard());
+            }
+
+            discardPile.addCard(topCard);
+            deck.shuffle();
+        }
+
+        return deck.drawCard();
+    }
+    /**
+     * Игрок объявляет UNO.
+     */
+    public void callUno(Player player) {
+        if (player == null || player != unoPlayer) {
+            throw new IllegalArgumentException(
+                    "Этот игрок не должен объявлять UNO"
+            );
+        }
+
+        unoPlayer = null;
+    }
+    /**
+     * Наказывает игрока за забытое объявление UNO.
+     */
+    public void catchUno(Player player) {
+        if (player == null || player != unoPlayer) {
+            throw new IllegalArgumentException(
+                    "Игрок не нарушил правило UNO"
+            );
+        }
+
+        for (int i = 0; i < 2; i++) {
+            player.getHand().addCard(drawFromDeck());
+        }
+
+        unoPlayer = null;
+    }
+    /**
+     * Проверяет, закончилась ли партия.
+     */
+    public boolean isFinished() {
+        for (Player player : state.getPlayers()) {
+            if (player.getHand().isEmpty()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Возвращает победителя.
+     */
+    public Player getWinner() {
+        for (Player player : state.getPlayers()) {
+            if (player.getHand().isEmpty()) {
+                return player;
+            }
+        }
+
+        return null;
+    }
+    /**
+     * Подсчитывает очки победителя.
+     */
+    public int calculateWinnerScore() {
+        if (!isFinished()) {
+            throw new IllegalStateException(
+                    "Игра ещё не закончена"
+            );
+        }
+
+        Player winner = getWinner();
+        int score = 0;
+
+        for (Player player : state.getPlayers()) {
+            if (player != winner) {
+                for (Card card : player.getHand().getCards()) {
+                    score += card.getValue().getPoints();
+                }
+            }
+        }
+
+        return score;
+    }
 }
-git commit -m "Add card playing mechanics, legal move validation, connect card effects to game mechanics"
