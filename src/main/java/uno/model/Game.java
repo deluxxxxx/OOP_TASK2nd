@@ -51,6 +51,11 @@ public class Game implements GameActions {
         if (card == null) {
             throw new IllegalArgumentException("Карта не может быть null");
         }
+        if (isFinished()) {
+            throw new IllegalStateException(
+                    "Игра уже завершена"
+            );
+        }
 
         Player player = state.getCurrentPlayer();
 
@@ -67,12 +72,18 @@ public class Game implements GameActions {
         }
 
         player.getHand().removeCard(card);
+        state.getDiscardPile().addCard(card);
+
+        if (player.getHand().isEmpty()) {
+            unoPlayer = null;
+            return;
+        }
         if (player.getHand().size() == 1) {
             unoPlayer = player;
         } else {
             unoPlayer = null;
         }
-        state.getDiscardPile().addCard(card);
+
 
         if (!card.getValue().isWild()) {
             state.setCurrentColor(card.getColor().orElseThrow());
@@ -91,6 +102,11 @@ public class Game implements GameActions {
      * Берёт одну карту из колоды для текущего игрока.
      */
     public Card drawCard() {
+        if (isFinished()) {
+            throw new IllegalStateException(
+                    "Игра уже завершена"
+            );
+        }
         Player player = state.getCurrentPlayer();
 
         Card card = drawFromDeck();
