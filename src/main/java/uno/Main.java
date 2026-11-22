@@ -15,7 +15,7 @@ public class Main {
         Player player2 = new Player("Игрок 2");
         Player player3 = new Player("Игрок 3");
 
-        Deck deck = DeckFactory.createStandardDeck(new Random(42));
+        Deck deck = DeckFactory.createStandardDeck(new Random());
 
         DiscardPile discardPile = new DiscardPile();
 
