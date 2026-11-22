@@ -5,6 +5,7 @@ import uno.model.*;
 
 import java.util.List;
 import java.util.Random;
+import java.util.Scanner;
 
 public class Main {
 
@@ -28,77 +29,10 @@ public class Main {
 
         game.dealCards();
 
-        System.out.println("========== UNO ==========");
+        Scanner scanner = new Scanner(System.in);
 
-        for (Player player : state.getPlayers()) {
-            System.out.println("\n" + player.getName());
-            System.out.println("Карты: " + player.getHand().getCards());
-        }
+        GameRunner runner = new GameRunner(game, scanner);
 
-        System.out.println("\nКарта на столе: "
-                + discardPile.getTopCard());
-
-        System.out.println("Текущий цвет: "
-                + state.getCurrentColor());
-
-        Player currentPlayer = state.getCurrentPlayer();
-
-        System.out.println("\nХодит: "
-                + currentPlayer.getName());
-
-        List<Card> legalCards = currentPlayer.getHand()
-                .getCards()
-                .stream()
-                .filter(card -> GameRules.isLegalMove(card, state))
-                .toList();
-
-        if (legalCards.isEmpty()) {
-
-            System.out.println("Нет подходящих карт.");
-
-            Card drawnCard = game.drawCard();
-
-            System.out.println("Взятая карта: " + drawnCard);
-
-        } else {
-
-            Card selectedCard = legalCards.get(0);
-
-            System.out.println("Игрок выкладывает: "
-                    + selectedCard);
-
-            CardColor chosenColor = selectedCard.getValue().isWild()
-                    ? CardColor.RED
-                    : null;
-
-            game.playCard(selectedCard, chosenColor);
-        }
-
-        // Показываем результат хода
-        System.out.println("\n========== РЕЗУЛЬТАТ ==========");
-
-        for (Player player : state.getPlayers()) {
-            System.out.println(
-                    player.getName()
-                            + ": "
-                            + player.getHand().size()
-                            + " карт"
-            );
-        }
-
-        System.out.println("Следующий игрок: "
-                + state.getCurrentPlayer().getName());
-
-        if (game.isFinished()) {
-
-            System.out.println("\nПобедитель: "
-                    + game.getWinner().getName());
-
-            System.out.println("Очки победителя: "
-                    + game.calculateWinnerScore());
-
-        } else {
-            System.out.println("\nИгра продолжается.");
-        }
+        runner.start();
     }
 }

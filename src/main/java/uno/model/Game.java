@@ -1,18 +1,20 @@
+
 package uno.model;
 
-import java.util.ArrayList;
-import java.util.List;
 import uno.effects.GameActions;
 import java.util.Optional;
 
 public class Game implements GameActions {
+
     private final GameState state;
     private boolean skipNextPlayer = false;
-    private Player unoPlayer;
+    private Player pendingUnoPlayer;
 
     public Game(GameState state) {
         if (state == null) {
-            throw new IllegalArgumentException("Состояние игры не может быть null");
+            throw new IllegalArgumentException(
+                    "Состояние игры не может быть null"
+            );
         }
 
         this.state = state;
@@ -22,11 +24,16 @@ public class Game implements GameActions {
         return state;
     }
 
+    /**
+     * Раздаёт каждому игроку по 7 карт.
+     */
     public void dealCards() {
         Deck deck = state.getDeck();
 
         if (deck.size() < state.getPlayers().size() * 7 + 1) {
-            throw new IllegalStateException("Недостаточно карт для раздачи");
+            throw new IllegalStateException(
+                    "Недостаточно карт для раздачи"
+            );
         }
 
         for (int i = 0; i < 7; i++) {
@@ -44,13 +51,18 @@ public class Game implements GameActions {
             state.setCurrentColor(CardColor.RED);
         }
     }
+
     /**
      * Выполняет ход текущего игрока.
      */
     public void playCard(Card card, CardColor chosenColor) {
+
         if (card == null) {
-            throw new IllegalArgumentException("Карта не может быть null");
+            throw new IllegalArgumentException(
+                    "Карта не может быть null"
+            );
         }
+
         if (isFinished()) {
             throw new IllegalStateException(
                     "Игра уже завершена"
@@ -60,36 +72,48 @@ public class Game implements GameActions {
         Player player = state.getCurrentPlayer();
 
         if (!player.getHand().getCards().contains(card)) {
-            throw new IllegalArgumentException("У игрока нет такой карты");
+            throw new IllegalArgumentException(
+                    "У игрока нет такой карты"
+            );
         }
 
         if (!GameRules.isLegalMove(card, state)) {
-            throw new IllegalArgumentException("Эту карту нельзя положить");
+            throw new IllegalArgumentException(
+                    "Эту карту нельзя положить"
+            );
         }
 
         if (card.getValue().isWild() && chosenColor == null) {
-            throw new IllegalArgumentException("Необходимо выбрать цвет");
+            throw new IllegalArgumentException(
+                    "Необходимо выбрать цвет"
+            );
+        }
+
+        if (pendingUnoPlayer != null && pendingUnoPlayer != player) {
+            pendingUnoPlayer = null;
         }
 
         player.getHand().removeCard(card);
         state.getDiscardPile().addCard(card);
 
-        if (player.getHand().isEmpty()) {
-            unoPlayer = null;
-            return;
-        }
-        if (player.getHand().size() == 1) {
-            unoPlayer = player;
-        } else {
-            unoPlayer = null;
-        }
-
-
         if (!card.getValue().isWild()) {
             state.setCurrentColor(card.getColor().orElseThrow());
         }
 
+        // Применяем эффект даже в том случае,
+        // если эта карта последняя у игрока.
         card.applyEffect(this, Optional.ofNullable(chosenColor));
+
+        // Если карт больше нет, игрок побеждает.
+        if (player.getHand().isEmpty()) {
+            pendingUnoPlayer = null;
+            return;
+        }
+
+        // Если осталась одна карта, нужно объявить UNO.
+        if (player.getHand().size() == 1) {
+            pendingUnoPlayer = player;
+        }
 
         state.moveToNextPlayer();
 
@@ -98,23 +122,26 @@ public class Game implements GameActions {
             skipNextPlayer = false;
         }
     }
+
     /**
      * Берёт одну карту из колоды для текущего игрока.
      */
     public Card drawCard() {
+
         if (isFinished()) {
             throw new IllegalStateException(
                     "Игра уже завершена"
             );
         }
+
         Player player = state.getCurrentPlayer();
 
         Card card = drawFromDeck();
-
         player.getHand().addCard(card);
 
         return card;
     }
+
     @Override
     public void skipNextPlayer() {
         skipNextPlayer = true;
@@ -122,25 +149,26 @@ public class Game implements GameActions {
 
     @Override
     public void reverseDirection() {
-        state.reverseDirection();
+
+        if (state.getPlayers().size() == 2) {
+            skipNextPlayer = true;
+        } else {
+            state.reverseDirection();
+        }
     }
 
     @Override
     public void drawCards(int count) {
+
         if (count <= 0) {
             throw new IllegalArgumentException(
                     "Количество карт должно быть положительным"
             );
         }
+
         Player player = state.getNextPlayer();
 
         for (int i = 0; i < count; i++) {
-            if (state.getDeck().isEmpty()) {
-                throw new IllegalStateException(
-                        "Колода закончилась"
-                );
-            }
-
             player.getHand().addCard(drawFromDeck());
         }
 
@@ -149,17 +177,27 @@ public class Game implements GameActions {
 
     @Override
     public void changeColor(CardColor color) {
+
+        if (color == null) {
+            throw new IllegalArgumentException(
+                    "Цвет не может быть null"
+            );
+        }
+
         state.setCurrentColor(color);
     }
+
     /**
      * Берёт карту из колоды.
      * Если колода пуста, восстанавливает её из стопки сброса.
      */
     private Card drawFromDeck() {
+
         Deck deck = state.getDeck();
         DiscardPile discardPile = state.getDiscardPile();
 
         if (deck.isEmpty()) {
+
             if (discardPile.size() <= 1) {
                 throw new IllegalStateException(
                         "Нет карт для восстановления колоды"
@@ -178,38 +216,65 @@ public class Game implements GameActions {
 
         return deck.drawCard();
     }
+
     /**
      * Игрок объявляет UNO.
      */
     public void callUno(Player player) {
-        if (player == null || player != unoPlayer) {
+
+        if (player == null || player != pendingUnoPlayer) {
             throw new IllegalArgumentException(
                     "Этот игрок не должен объявлять UNO"
             );
         }
 
-        unoPlayer = null;
+        pendingUnoPlayer = null;
     }
+
     /**
-     * Наказывает игрока за забытое объявление UNO.
+     * Другой игрок ловит нарушителя.
      */
-    public void catchUno(Player player) {
-        if (player == null || player != unoPlayer) {
-            throw new IllegalArgumentException(
-                    "Игрок не нарушил правило UNO"
+    public void catchUno(Player catcher) {
+
+        if (pendingUnoPlayer == null) {
+            throw new IllegalStateException(
+                    "Сейчас никто не нарушил правило UNO"
             );
         }
 
-        for (int i = 0; i < 2; i++) {
-            player.getHand().addCard(drawFromDeck());
+        if (catcher == null || catcher == pendingUnoPlayer) {
+            throw new IllegalArgumentException(
+                    "Нельзя поймать самого себя"
+            );
         }
 
-        unoPlayer = null;
+        if (catcher != state.getCurrentPlayer()) {
+            throw new IllegalArgumentException(
+                    "Поймать нарушителя может только текущий игрок"
+            );
+        }
+
+        Player offender = pendingUnoPlayer;
+
+        for (int i = 0; i < 2; i++) {
+            offender.getHand().addCard(drawFromDeck());
+        }
+
+        pendingUnoPlayer = null;
     }
+
+    /**
+     * Возвращает игрока, который должен объявить UNO.
+     */
+    public Player getPendingUnoPlayer() {
+        return pendingUnoPlayer;
+    }
+
     /**
      * Проверяет, закончилась ли партия.
      */
     public boolean isFinished() {
+
         for (Player player : state.getPlayers()) {
             if (player.getHand().isEmpty()) {
                 return true;
@@ -223,6 +288,7 @@ public class Game implements GameActions {
      * Возвращает победителя.
      */
     public Player getWinner() {
+
         for (Player player : state.getPlayers()) {
             if (player.getHand().isEmpty()) {
                 return player;
@@ -231,10 +297,12 @@ public class Game implements GameActions {
 
         return null;
     }
+
     /**
      * Подсчитывает очки победителя.
      */
     public int calculateWinnerScore() {
+
         if (!isFinished()) {
             throw new IllegalStateException(
                     "Игра ещё не закончена"
@@ -245,6 +313,7 @@ public class Game implements GameActions {
         int score = 0;
 
         for (Player player : state.getPlayers()) {
+
             if (player != winner) {
                 for (Card card : player.getHand().getCards()) {
                     score += card.getValue().getPoints();
@@ -253,5 +322,38 @@ public class Game implements GameActions {
         }
 
         return score;
+    }
+    /**
+     * Завершает ход текущего игрока без выкладывания карты.
+     */
+    public void passTurn() {
+        if (isFinished()) {
+            throw new IllegalStateException("Игра уже завершена");
+        }
+
+        state.moveToNextPlayer();
+    }
+    /**
+     * Проверяет, есть ли у текущего игрока допустимый ход.
+     */
+    public boolean hasLegalMove() {
+
+        Player player = state.getCurrentPlayer();
+
+        for (Card card : player.getHand().getCards()) {
+            if (GameRules.isLegalMove(card, state)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Завершает возможность поймать игрока,
+     * забывшего объявить UNO.
+     */
+    public void expireUnoOpportunity() {
+        pendingUnoPlayer = null;
     }
 }
