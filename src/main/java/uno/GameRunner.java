@@ -1,6 +1,9 @@
 package uno;
 
 import uno.model.*;
+import uno.commands.DrawCardCommand;
+import uno.commands.PlayCardCommand;
+import uno.commands.PassTurnCommand;
 
 import java.util.List;
 import java.util.Scanner;
@@ -23,7 +26,6 @@ public class GameRunner {
 
             Player player = state.getCurrentPlayer();
 
-            // Проверяем, не забыл ли предыдущий игрок объявить UNO
             Player pendingPlayer = game.getPendingUnoPlayer();
 
             if (pendingPlayer != null && pendingPlayer != player) {
@@ -95,7 +97,12 @@ public class GameRunner {
 
                 if (choice == -1) {
 
-                    Card drawnCard = game.drawCard();
+                    DrawCardCommand drawCommand =
+                            new DrawCardCommand(game);
+
+                    drawCommand.execute();
+
+                    Card drawnCard = drawCommand.getDrawnCard();
 
                     System.out.println("Вы взяли: " + drawnCard);
 
@@ -111,13 +118,20 @@ public class GameRunner {
 
                             CardColor chosenColor = chooseColor(drawnCard);
 
-                            game.playCard(drawnCard, chosenColor);
+                            PlayCardCommand playCommand =
+                                    new PlayCardCommand(
+                                            game,
+                                            drawnCard,
+                                            chosenColor
+                                    );
+
+                            playCommand.execute();
 
                             handleUno(player);
 
                         } else {
 
-                            game.passTurn();
+                            new PassTurnCommand(game).execute();
                         }
 
                     } else {
@@ -126,7 +140,7 @@ public class GameRunner {
                                 "Карта не подходит. Ход переходит дальше."
                         );
 
-                        game.passTurn();
+                        new PassTurnCommand(game).execute();
                     }
 
                 } else if (choice >= 0 && choice < cards.size()) {
@@ -140,7 +154,14 @@ public class GameRunner {
 
                     CardColor chosenColor = chooseColor(selectedCard);
 
-                    game.playCard(selectedCard, chosenColor);
+                    PlayCardCommand playCommand =
+                            new PlayCardCommand(
+                                    game,
+                                    selectedCard,
+                                    chosenColor
+                            );
+
+                    playCommand.execute();
 
                     handleUno(player);
 
@@ -165,13 +186,8 @@ public class GameRunner {
                 + game.calculateWinnerScore());
     }
 
-    /**
-     * Обработка объявления UNO.
-     */
     private void handleUno(Player player) {
-
         if (game.getPendingUnoPlayer() == player) {
-
             System.out.println(
                     "\nУ вас осталась одна карта! Напишите UNO:"
             );
@@ -179,29 +195,20 @@ public class GameRunner {
             String answer = scanner.nextLine();
 
             if (answer.equalsIgnoreCase("UNO")) {
-
                 game.callUno(player);
-
                 System.out.println("UNO объявлено!");
-
             } else {
-
                 System.out.println("Вы не объявили UNO!");
             }
         }
     }
 
-    /**
-     * Выбор цвета для карты смены цвета.
-     */
     private CardColor chooseColor(Card card) {
-
         if (!card.getValue().isWild()) {
             return null;
         }
 
         while (true) {
-
             System.out.println(
                     "Выберите цвет: RED, YELLOW, GREEN, BLUE"
             );
@@ -209,11 +216,8 @@ public class GameRunner {
             String input = scanner.nextLine();
 
             try {
-
                 return CardColor.valueOf(input.toUpperCase());
-
             } catch (IllegalArgumentException exception) {
-
                 System.out.println("Такого цвета нет.");
             }
         }
